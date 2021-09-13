@@ -1,0 +1,62 @@
+---
+title: "wow-dc-text-analysis"
+author: "Nick"
+date: "9/13/2021"
+output: github_document
+---
+
+## WoW with WOW discord text mining
+
+This project's main aim is to explore various text mining methods with R, following along Dave Langer's [Text Analytics with R series](https://www.youtube.com/watch?v=4vuw0AsHeGw&list=PLTJTBoU5HOCR5Vkah2Z-AU76ZYsZjGFK6&ab_channel=DataScienceDojo) here.
+
+I will be exploring data from a World of Warcraft Q&A discord channel.
+
+Have fun learning along with me!
+
+## Required packages
+
+```{r packages-list, message = FALSE}
+library(tidyverse)
+library(jsonlite)
+library(lubridate)
+```
+
+## Getting the data
+
+To get the discord data required for analysis, I used Tyrrrz's [DiscordChatExporter](https://github.com/Tyrrrz/DiscordChatExporter), and pulled the data out from the `ask for help` channel from the r/WoW Discord group. 
+
+Note that automating your Discord account is technically against Discord's TOS, so use with caution, and don't pull out data too quickly which might flag your account.
+
+This channel is almost a Q&A of sorts, which could show trends in what people are excited or need help the most with in World of Warcraft.
+
+Data can be extracted in various output types, but we will be using JSON to get the neatest dataset possible. Now, we'll get the data into R using the `jsonlite` package.
+
+```{r initial-data-import, echo = FALSE}
+
+initial_discord_dump <- fromJSON("C:/Users/herkm/Desktop/R Workspace/wow-discord-text-project/[CHAT EXPORT] World of Warcraft - Serious Channels - ask-for-help [205710841146900480].json")
+
+str(initial_discord_dump)
+```
+Getting a list of lists, we find that we are only interested in one section of the data - the `messages` list, and its content. Let's extract that and turn it into a dataframe
+
+```{r data-framed-initial-import}
+discord_messages_only <- tibble(initial_discord_dump$messages)
+
+```
+Now, we have to filter further, removing unnecessary columns like attachments, isPinned, etc. Also, we want to unnest the author dataframe, and remove columns that are unnecessary for analysis, namely the `color`, `avatarUrl`, `nickname`, and `isBot` columns.
+
+```{r dplyr-data-frame-construction}
+time_and_content_only <- discord_messages_only %>% 
+  select(timestamp, content)
+
+wow_help_authors_only <- discord_messages_only %>% 
+  select(author)
+
+wow_help_authors_only_df <- do.call(data.frame, wow_help_authors_only) %>% 
+  select(-author.color, -author.avatarUrl, -author.nickname, -author.isBot)
+
+wow_content_filtered <- bind_cols(time_and_content_only, wow_help_authors_only_df)
+
+str(wow_content_filtered)
+```
+Viola! we now have a great looking data table for text analysis.
